@@ -1,8 +1,11 @@
 package com.example.range
+
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
@@ -20,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnGetLocation: Button
     private lateinit var tvLocation: TextView
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -30,15 +34,21 @@ class MainActivity : AppCompatActivity() {
         tvLocation = findViewById(R.id.tvLocation)
 
         locationRequest = LocationRequest.create().apply {
-            interval = 500 // Update interval in milliseconds
-            fastestInterval = 100 // Fastest interval in milliseconds
+            interval = 50 // Update interval in milliseconds
+            fastestInterval = 50 // Fastest interval in milliseconds
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
-
 
         btnGetLocation.setOnClickListener {
             checkLocationPermission()
         }
+
+
+
+
+
+
+
     }
 
     private fun checkLocationPermission() {
@@ -57,6 +67,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            val lastLocation: Location = locationResult.lastLocation!!
+            tvLocation.text = "Latitude: ${lastLocation.latitude}, Longitude: ${lastLocation.longitude}"
+
+            val isInsideGeofence = isInsideGeofenceArea(lastLocation.latitude, lastLocation.longitude)
+            if (isInsideGeofence) {
+                tvLocation.append("\nYou are inside the geofence area")
+            } else {
+                tvLocation.append("\nYou are outside the geofence area")
+            }
+        }
+    }
     @SuppressLint("MissingPermission")
     private fun getLastLocation() {
         fusedLocationClient.requestLocationUpdates(
@@ -73,6 +96,9 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         tvLocation.append("\nYou are outside the geofence area")
                     }
+                   // Update with your actual longitude
+
+
                 }
             },
             null
@@ -80,14 +106,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Define your geofence area here
-    private val labCorner1 = LatLng(16.92083, 73.34150)
-    private val labCorner2 = LatLng(16.92075, 73.31450)
-    private val labCorner3 = LatLng(16.92084, 73.31457)
-    private val labCorner4 = LatLng(16.92075, 73.31461)
-
+    private val labCorner = LatLng(16.985730920287935, 73.29994899834958)
+    private val geofenceRadius = 8 // in meters
     private fun isInsideGeofenceArea(latitude: Double, longitude: Double): Boolean {
-        return latitude >= labCorner1.latitude && latitude <= labCorner2.latitude &&
-                longitude >= labCorner3.longitude && longitude <= labCorner4.longitude
+        val userLocation = Location("UserLocation")
+        userLocation.latitude = latitude
+        userLocation.longitude = longitude
+
+        val geofenceCenter = Location("GeofenceCenter")
+        geofenceCenter.latitude = labCorner.latitude
+        geofenceCenter.longitude = labCorner.longitude
+
+        val distance = userLocation.distanceTo(geofenceCenter)
+        return distance <= geofenceRadius
     }
 
     override fun onRequestPermissionsResult(
